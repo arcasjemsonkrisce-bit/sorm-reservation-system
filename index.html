@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SORM — SMSHS Online Reservation Management</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { 
+            background: linear-gradient(135deg, #e8f0fe 0%, #dbeafe 100%); 
+            min-height: 100vh;
+            padding: 15px; 
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        h1 { 
+            text-align: center; 
+            color: #1e40af; 
+            margin: 15px 0 25px; 
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        /* === TABS === */
+        .tab-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+        .tab-btn { 
+            padding: 12px 16px; 
+            background: white; 
+            border: 2px solid transparent;
+            border-radius: 10px; 
+            cursor: pointer; 
+            font-size: 15px;
+            font-weight: 500;
+            flex: 1;
+            min-width: 100px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .tab-btn:hover { background: #eff6ff; transform: translateY(-1px); }
+        .tab-btn.active { 
+            background: #2563eb; 
+            color: white; 
+            border-color: #1d4ed8;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card { 
+            background: white; 
+            padding: 25px; 
+            border-radius: 16px; 
+            margin-bottom: 20px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        /* === 📅 CALENDAR === */
+        .calendar-wrapper { max-width: 100%; }
+        
+        .calendar-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .nav-btn {
+            background: #eff6ff;
+            border: none;
+            padding: 1px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            color: #2563eb;
+            transition: all 0.2s;
+        }
+        .nav-btn:hover { background: #dbeafe; }
+        
+        .month-year-display {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1e40af;
+        }
+        
+        .calendar-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        select {
+            padding: 9px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            background: white;
+        }
+        select:focus { outline: none; border-color: #2563eb; }
+        
+        .today-btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 9px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .today-btn:hover { background: #1d4ed8; }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+        
+        .calendar-day-header {
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+            color: white;
+            padding: 14px 8px;
+            text-align: center;
+            font-weight: 700;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .calendar-day {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            min-height: 90px;
+            border-radius: 10px;
+            padding: 8px;
+            transition: all 0.25s ease;
+            cursor: pointer;
+        }
+        
+        .calendar-day:hover {
+            background: #eff6ff;
+            border-color: #93c5fd;
+            transform: scale(1.03);
+        }
+        
+        .day-number {
+            font-weight: 700;
+            font-size: 17px;
+            color: #1e40af;
+            margin-bottom: 5px;
+        }
+        
+        .other-month {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+        
+        .today-mark {
+            background: #fef3c7;
+            border-color: #f59e0b;
+        }
+        .today-mark .day-number {
+            color: #b45309;
+        }
+        
+        .selected-mark {
+            background: #dbeafe;
+            border-color: #2563eb;
+        }
+        
+        .event-tag {
+            font-size: 11px;
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 4px 6px;
+            border-radius: 5px;
+            margin-bottom: 4px;
+            line-height: 1.4;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* === FORMS & TABLES === */
+        label { display: block; margin: 14px 0 6px; font-size: 15px; font-weight: 600; color: #374151; }
+        input, select, textarea { 
+            width: 100%; 
+            padding: 12px; 
+            border: 2px solid #e5e7eb; 
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border 0.2s;
+        }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #2563eb; }
+        .time-row { display: flex; gap: 15px; flex-wrap: wrap; }
+        .time-row > div { flex: 1; min-width: 140px; }
+
+        button { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 600; transition: all 0.2s; }
+        .btn-green { background: #16a34a; color: white; }
+        .btn-green:hover { background: #15803d; }
+        .btn-yellow { background: #f59e0b; color: white; }
+        .btn-yellow:hover { background: #d97706; }
+        .btn-blue { background: #2563eb; color: white; }
+        .btn-blue:hover { background: #1d4ed8; }
+        .btn-red { background: #dc2626; color: white; }
+        .btn-red:hover { background: #b91c1c; }
+        .btn-sm { padding: 6px 12px; font-size: 13px; margin: 3px; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
+        th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #f1f5f9; }
+        th { background: #f8fafc; font-weight: 700; color: #374151; }
+        tr:hover { background: #f8fafc; }
+
+        .facility-item { 
+            padding: 15px; 
+            border: 2px solid #e5e7eb; 
+            border-radius: 10px; 
+            margin-bottom: 10px;
+            transition: border 0.2s;
+        }
+        .facility-item:hover { border-color: #d1d5db; }
+        .avail { color: #16a34a; font-weight: 600; }
+        .pending { color: #d97706; font-weight: 600; }
+        .taken { color: #dc2626; font-weight: 600; }
+
+        .message { padding: 15px; border-radius: 10px; margin: 15px 0; display: none; font-weight: 500; }
+        .message.show { display: block; animation: fadeIn 0.3s ease; }
+        .msg-success { background: #dcfce7; color: #166534; border-left: 4px solid #16a34a; }
+        .msg-error { background: #fee2e2; color: #991b1b; border-left: 4px solid #dc2626; }
+        .msg-info { background: #dbeafe; color: #1e40af; border-left: 4px solid #2563eb; }
+
+        .hidden { display: none !important; }
+
+        .popup {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(4px);
+        }
+        .popup.show { display: flex; }
+        .popup-box {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 340px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        }
+        .popup-box h3 { color: #1e40af; margin-bottom: 10px; }
+
+        .receipt-popup {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            z-index: 150;
+            backdrop-filter: blur(4px);
+        }
+        .receipt-popup.show { display: flex; }
+        .receipt-box {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        }
+        .receipt-box h3 { text-align: center; color: #1e40af; margin-bottom: 12px; font-size: 22px; }
+        .receipt-box p { margin: 8px 0; font-size: 15px; }
+        .receipt-box hr { border: none; border-top: 2px dashed #e5e7eb; margin: 15px 0; }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .calendar-day { min-height: 70px; padding: 4px; }
+            .day-number { font-size: 14px; }
+            .event-tag { font-size: 9px; padding: 2px 4px; }
+            .calendar-day-header { padding: 10px 4px; font-size: 12px; }
+            h1 { font-size: 20px; }
+            .month-year-display { font-size: 18px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🏫 SORM — SMSHS Online Reservation Management</h1>
+
+    <div class="tab-buttons">
+        <button class="tab-btn active" onclick="openTab('calendar')">📅 Calendar</button>
+        <button class="tab-btn" onclick="openTab('availability')">📌 Availability</button>
+        <button class="tab-btn" onclick="openTab('reserve')">📝 Reserve</button>
+        <button class="tab-btn" onclick="openAdminTab()">🔐 Admin</button>
+    </div>
+
+    <div id="message" class="message"></div>
+
+    <!-- 📅 CALENDAR TAB -->
+    <div id="calendar" class="tab-content active">
+        <div class="card calendar-wrapper">
+            <div class="calendar-top">
+                <button class="nav-btn" onclick="changeMonth(-1)">◀</button>
+                <div class="month-year-display" id="monthYear"></div>
+                <button class="nav-btn" onclick="changeMonth(1)">▶</button>
+                
+                <div class="calendar-controls">
+                    <select id="monthSelect" onchange="goToSelectedMonth()">
+                        <option value="0">January</option>
+                        <option value="1">February</option>
+                        <option value="2">March</option>
+                        <option value="3">April</option>
+                        <option value="4">May</option>
+                        <option value="5">June</option>
+                        <option value="6">July</option>
+                        <option value="7">August</option>
+                        <option value="8">September</option>
+                        <option value="9" selected>October</option>
+                        <option value="10">November</option>
+                        <option value="11">December</option>
+                    </select>
+                    <select id="yearSelect" onchange="goToSelectedYear()"></select>
+                    <button class="today-btn" onclick="goToToday()">Today</button>
+                </div>
+            </div>
+            
+            <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+    </div>
+
+    <!-- 📌 AVAILABILITY -->
+    <div id="availability" class="tab-content">
+        <div class="card">
+            <h2 style="margin-bottom: 15px; color: #1e40af;">📌 Facility Availability</h2>
+            <label>Select Date to Check:</label>
+            <input type="date" id="avail-date" onchange="updateAvailability()">
+            <p style="margin: 12px 0; font-size: 14px;">
+                <span class="avail">● Available</span> &nbsp;|&nbsp; 
+                <span class="pending">● Pending Approval</span> &nbsp;|&nbsp; 
+                <span class="taken">● Reserved</span>
+            </p>
+            <div id="facility-list"></div>
+        </div>
+    </div>
+
+    <!-- 📝 RESERVE -->
+    <div id="reserve" class="tab-content">
+        <div class="card">
+            <h2 style="margin-bottom: 15px; color: #1e40af;">📝 Reserve a Facility</h2>
+            <form onsubmit="submitForm(event)">
+                <label>Your Full Name (Requester):</label>
+                <input type="text" id="student-name" placeholder="Enter your full name" required>
+
+                <label>👩‍🏫 Teacher / Facilitator:</label>
+                <input type="text" id="teacher-name" placeholder="Name of teacher in charge" required>
+
+                <label>Facility / Room:</label>
+                <select id="facility-select" required>
+                    <option value="">-- Select a Facility --</option>
+                    <option value="avr">AVR Room</option>
+                    <option value="computer">Computer Laboratory</option>
+                    <option value="science">Science Laboratory</option>
+                    <option value="cafe">Research Cafe</option>
+                    <option value="stage">Main Stage</option>
+                    <option value="grounds">School Grounds</option>
+                </select>
+
+                <label>Date of Use:</label>
+                <input type="date" id="use-date" required>
+
+                <div class="time-row">
+                    <div>
+                        <label>Start Time:</label>
+                        <input type="time" id="start-time" required>
+                    </div>
+                    <div>
+                        <label>End Time:</label>
+                        <input type="time" id="end-time" required>
+                    </div>
+                </div>
+
+                <label>Purpose of Use:</label>
+                <textarea id="purpose" rows="3" placeholder="Describe what this is for..." required></textarea>
+
+                <br>
+                <button type="button" class="btn-yellow" onclick="checkSlot()">🔍 Check Availability</button>
+                <button type="submit" class="btn-green">✅ Submit Request</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 🔐 ADMIN PANEL -->
+    <div id="admin" class="tab-content">
+        <div class="card">
+            <h2 style="margin-bottom: 15px; color: #1e40af;">🔐 Admin — All Requests</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Reference #</th>
+                        <th>Facility</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Requester</th>
+                        <th>Teacher</th>
+                        <th>Purpose</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="admin-table"></tbody>
+            </table>
+            <p id="no-admin" class="hidden" style="text-align:center; color:#6b7280; padding:30px; font-size:15px;">No requests yet.</p>
+        </div>
+    </div>
+</div>
+
+<!-- 🔐 LOGIN POPUP -->
+<div id="password-popup" class="popup" onclick="if(event.target===this){closePopup()}">
+    <div class="popup-box">
+        <h3>🔐 Admin Login</h3>
+        <p style="font-size:15px; color:#6b7280; margin:12px 0;">Enter password to continue</p>
+        <input type="password" id="password-input" placeholder="Enter admin password" style="margin-bottom: 8px;">
+        <p id="wrong-password" class="hidden" style="color:#dc2626; font-size:13px; margin:8px 0;">❌ Incorrect password</p>
+        <div style="display:flex; gap:10px; margin-top:18px;">
+            <button class="btn-blue" style="flex:1;" onclick="checkPassword()">Login</button>
+            <button class="btn-red" style="flex:1;" onclick="closePopup()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- 🧾 RECEIPT POPUP -->
+<div id="receipt-popup" class="receipt-popup" onclick="if(event.target===this){closeReceipt()}">
+    <div class="receipt-box" id="receipt-content"></div>
+</div>
+
+<script>
+// === GLOBAL VARIABLES ===
+const ADMIN_PASSWORD = 'admin123';
+let adminLoggedIn = false;
+let currentDate = new Date();
+let selectedDate = null;
+
+const facilities = {
+    'avr': 'AVR Room',
+    'computer': 'Computer Laboratory',
+    'science': 'Science Laboratory',
+    'cafe': 'Research Cafe',
+    'stage': 'Main Stage',
+    'grounds': 'School Grounds'
+};
+
+let requests = JSON.parse(localStorage.getItem('reservation-data')) || [];
+
+// === INITIALIZE ===
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('avail-date').value = today;
+    document.getElementById('use-date').min = today;
+    
+    // Populate year select
+    const yearSelect = document.getElementById('yearSelect');
+    const thisYear = new Date().getFullYear();
+    for (let y = thisYear - 2; y <= thisYear + 3; y++) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        if (y === thisYear) opt.selected = true;
+        yearSelect.appendChild(opt);
+    }
+    
+    renderCalendar();
+    updateAvailability();
+});
+
+// === 📅 CALENDAR FUNCTIONS ===
+function renderCalendar() {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    
+    // Update display
+    const monthNames = ["January", "February", "March", "April", "May", "June", 
+                        "July", "August", "September", "October", "November", "December"];
+    document.getElementById('monthYear').textContent = `${monthNames[month]} ${year}`;
+    document.getElementById('monthSelect').value = month;
+    document.getElementById('yearSelect').value = year;
+    
+    // First day of month (0 = Sunday)
+    const firstDay = new Date(year, month, 1).getDay();
+    // Total days in current month
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    // Total days in previous month
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+    
+    const grid = document.getElementById('calendarGrid');
+    grid.innerHTML = '';
+    
+    // Day headers
+    const dayLabels = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    dayLabels.forEach(d => {
+        const header = document.createElement('div');
+        header.className = 'calendar-day-header';
+        header.textContent = d;
+        grid.appendChild(header);
+    });
+    
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    // Previous month trailing days
+    for (let i = firstDay - 1; i >= 0; i--) {
+        const dayNum = daysInPrevMonth - i;
+        const dayEl = createDayElement(dayNum, true);
+        grid.appendChild(dayEl);
+    }
+    
+    // Current month days
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const isToday = dateStr === todayStr;
+        const isSelected = selectedDate === dateStr;
+        const dayEl = createDayElement(day, false, isToday, isSelected, dateStr);
+        grid.appendChild(dayEl);
+    }
+    
+    // Next month leading days
+    const totalCells = firstDay + daysInMonth;
+    const remainingCells = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+    for (let i = 1; i <= remainingCells; i++) {
+        const dayEl = createDayElement(i, true);
+        grid.appendChild(dayEl);
+    }
+}
+
+function createDayElement(day
